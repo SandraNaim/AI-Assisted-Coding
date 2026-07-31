@@ -700,6 +700,9 @@
       fieldStatus.value = 'ToDo';
       fieldPriority.value = 'Medium';
       fieldAssignee.value = '';
+      // hide comments when creating a new task (comments are edit-only)
+      const commentsSection = document.getElementById('modal-comments');
+      if (commentsSection) commentsSection.style.display = 'none';
       fieldTitle.focus();
     }
 
@@ -718,7 +721,9 @@
       fieldAssignee.value = t.assignee ?? '';
       fieldTitle.focus();
 
-      // load comments for this task
+      // show comments section and load comments for this task
+      const commentsSection = document.getElementById('modal-comments');
+      if (commentsSection) commentsSection.style.display = 'block';
       loadComments(taskId);
     }
 
@@ -730,6 +735,9 @@
       // clear comments UI
       const cl = document.getElementById('comments-list');
       if (cl) cl.innerHTML = '';
+      // ensure comments section is hidden when modal is closed
+      const commentsSection = document.getElementById('modal-comments');
+      if (commentsSection) commentsSection.style.display = 'none';
     }
 
     // Open create modal
