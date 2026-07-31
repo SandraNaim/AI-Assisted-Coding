@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi import status
 from app.models import TaskCreate, TaskResponse, TaskStatus, TaskPriority, TaskUpdate
 from app import storage
+from app import features
 from fastapi import HTTPException, status
 from app.business_rules import validate_status_transition
 from datetime import datetime, timezone
@@ -58,9 +59,23 @@ def create_task(payload: TaskCreate) -> TaskResponse:
     tags=["tasks"],
     summary="List tasks",
 )
-def list_tasks(status: TaskStatus | None = None, priority: TaskPriority | None = None) -> list[TaskResponse]:
-    """Return a list of tasks. Optional query parameters: status and priority for filtering."""
-    return storage.get_all_tasks(status=status, priority=priority)
+def list_tasks(
+    q: str | None = None,
+    status: TaskStatus | None = None,
+    priority: TaskPriority | None = None,
+    assignee: str | None = None,
+    tag: str | None = None,
+    due_date: str | None = None,
+) -> list[TaskResponse]:
+    """Return a list of tasks. Supports text search (q) and combined filters.
+
+    Query param validation for enums is handled by FastAPI via TaskStatus/TaskPriority.
+    """
+    all_tasks = storage.get_all_tasks()
+    filtered = features.filter_tasks(
+        all_tasks, q=q, status=status, priority=priority, assignee=assignee, due_date=due_date, tag=tag
+    )
+    return filtered
 
 
 @app.get(
