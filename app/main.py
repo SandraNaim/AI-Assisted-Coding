@@ -108,3 +108,44 @@ def delete_task(task_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Task with id {task_id} not found")
     return None
+
+
+# Comments subresource
+from app.comments import CommentCreate, CommentResponse, list_comments, add_comment, delete_comment
+
+
+@app.get(
+    "/tasks/{task_id}/comments",
+    response_model=list[CommentResponse],
+    tags=["tasks"],
+    summary="List comments for a task",
+)
+def api_list_comments(task_id: str):
+    """Return comments for the given task or 404 if the task does not exist."""
+    return list_comments(task_id)
+
+
+@app.post(
+    "/tasks/{task_id}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["tasks"],
+    summary="Add a comment to a task",
+)
+def api_add_comment(task_id: str, payload: CommentCreate):
+    """Create a comment for a task. Returns 404 if the task doesn't exist, 422 on validation."""
+    return add_comment(task_id, payload)
+
+
+@app.delete(
+    "/tasks/{task_id}/comments/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["tasks"],
+    summary="Delete a comment",
+)
+def api_delete_comment(task_id: str, comment_id: str):
+    """Delete a comment; returns 404 if task or comment not found."""
+    deleted = delete_comment(task_id, comment_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Comment {comment_id} not found for task {task_id}")
+    return None
