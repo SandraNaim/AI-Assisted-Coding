@@ -155,6 +155,32 @@
 
     /* Keep small interactive affordances accessible */
     button, [role="button"]{ transition: opacity .12s ease, transform .12s ease; }
+
+    /* Filter bar styles */
+    .filter-bar .filter-row{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      background:linear-gradient(180deg,#fff,#fbfdff);
+      padding:10px;
+      border-radius:10px;
+      border:1px solid rgba(15,23,42,0.03);
+    }
+    .filter-bar input[type="search"], .filter-bar input[type="text"], .filter-bar select{
+      padding:8px 10px; border-radius:6px; border:1px solid #e6eefc; font-size:13px;
+    }
+    .btn{ background:var(--accent); color:#fff; border:0; padding:8px 10px; border-radius:8px; cursor:pointer; font-weight:600; }
+    .btn-ghost{ background:transparent; border:1px solid #e6eefc; color:var(--muted); }
+
+    /* Comments */
+    .comment{ background:#fff; border-radius:8px; padding:8px 10px; border:1px solid #f1f5f9; }
+    .comment-meta{ font-size:12px; color:#374151; margin-bottom:6px; }
+    .comment-meta .muted{ color:var(--muted); font-size:12px; margin-left:6px; }
+    .comment-text{ font-size:13px; color:#0f172a; }
+
+    @media (max-width: 900px){
+      .filter-bar .filter-row{ flex-direction:column; align-items:stretch; }
+    }
   </style>
 </head>
 <body>
@@ -167,6 +193,28 @@
       <button id="new-task-btn" style="background:var(--accent); color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600;">New Task</button>
     </div>
   </header>
+
+  <!-- Compact filter / search bar (static UI) -->
+  <div class="filter-bar" aria-label="Task filters" style="margin-bottom:16px;">
+    <div class="filter-row">
+      <input id="filter-q" type="search" placeholder="Search title or description" aria-label="Search tasks" />
+      <select id="filter-status" aria-label="Filter by status">
+        <option value="">Any status</option>
+        <option value="ToDo">To Do</option>
+        <option value="InProgress">In Progress</option>
+        <option value="Done">Done</option>
+      </select>
+      <select id="filter-priority" aria-label="Filter by priority">
+        <option value="">Any priority</option>
+        <option value="High">High</option>
+        <option value="Medium">Medium</option>
+        <option value="Low">Low</option>
+      </select>
+      <input id="filter-assignee" type="text" placeholder="Assignee" aria-label="Filter by assignee" />
+      <button id="filter-apply" class="btn">Apply</button>
+      <button id="filter-clear" class="btn btn-ghost">Clear</button>
+    </div>
+  </div>
 
   <main>
     <section class="board" aria-label="Kanban board">
@@ -305,13 +353,37 @@
           <button type="submit" id="modal-save" style="background:var(--accent); color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600;">Save</button>
         </div>
       </form>
+
+      <!-- Comments section (static) -->
+      <section id="modal-comments" style="margin-top:12px; border-top:1px solid #eef2ff; padding-top:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <h4 style="margin:0; font-size:14px;">Comments</h4>
+          <div style="color:var(--muted); font-size:13px;">3</div>
+        </div>
+
+        <div id="comments-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+          <div class="comment">
+            <div class="comment-meta"><strong>alex</strong> <span class="muted">• 2026-07-31</span></div>
+            <div class="comment-text">Initial project skeleton looks good — added basic routes.</div>
+          </div>
+          <div class="comment">
+            <div class="comment-meta"><strong>maya</strong> <span class="muted">• 2026-07-31</span></div>
+            <div class="comment-text">Working on auth integration next.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <input id="comment-input" placeholder="Add a comment" style="flex:1; padding:8px; border-radius:6px; border:1px solid #e6eefc;" />
+          <button id="comment-add" class="btn">Add</button>
+        </div>
+      </section>
     </div>
   </div>
 
   <script>
     // Frontend task loader & renderer with UI states: loading, ready, empty, error
-    const BASE_URL = 'http://localhost:8000';
-    let tasks = [];
+  const BASE_URL = 'http://localhost:8000';
+  let tasks = [];
 
     const STATUS_KEYS = ['ToDo', 'InProgress', 'Done'];
     const containers = {
@@ -377,10 +449,19 @@
       }
     }
 
-    async function fetchTasks() {
+    // Accept optional query params: { q, status, priority, assignee, tag, due_date }
+    async function fetchTasks(params = {}) {
       setState('loading');
       try {
-        const res = await fetch(`${BASE_URL}/tasks`);
+        const url = new URL(`${BASE_URL}/tasks`);
+        Object.entries(params).forEach(([k, v]) => {
+          if (v === undefined || v === null) return;
+          const s = String(v).trim();
+          if (s === '') return;
+          url.searchParams.set(k, s);
+        });
+
+        const res = await fetch(url.toString());
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         tasks = Array.isArray(data) ? data : [];
@@ -388,7 +469,7 @@
         if (tasks.length === 0) setState('empty');
         else setState('ready');
       } catch (err) {
-        console.error('Error fetching tasks:', err);
+        // show network or server errors
         tasks = [];
         renderBoard(tasks); // still render empty columns
         setState('error', err.message);
@@ -442,6 +523,12 @@
       btn.dataset.id = String(task.id);
       btn.textContent = 'Edit';
       actions.appendChild(btn);
+  // comment count badge (will be updated asynchronously)
+  const commentBadge = document.createElement('div');
+  commentBadge.className = 'chip';
+  commentBadge.style.marginLeft = '8px';
+  commentBadge.textContent = '…';
+  actions.appendChild(commentBadge);
       article.appendChild(actions);
 
       const dataAttrs = document.createElement('div');
@@ -502,6 +589,8 @@
         const countEl = columnCountEl(status);
         if (countEl) countEl.textContent = String(list.length);
       }
+  // refresh comment counts after rendering cards
+  updateCommentCounts();
       // attach drag handlers to columns (cards container's parent .column element)
       document.querySelectorAll('.column').forEach((col) => {
         col.addEventListener('dragover', (e) => {
@@ -559,6 +648,29 @@
       });
     }
 
+    // After render, update comment counts for visible cards (fire-and-forget)
+    async function updateCommentCounts() {
+      document.querySelectorAll('.card').forEach(async (card) => {
+        const id = card.dataset.id;
+        const badge = card.querySelector('.card-actions .chip');
+        if (!id || !badge) return;
+        try {
+          const res = await fetch(`${BASE_URL}/tasks/${id}/comments`);
+          if (res.ok) {
+            const arr = await res.json();
+            badge.textContent = String(Array.isArray(arr) ? arr.length : 0);
+          } else if (res.status === 404) {
+            // comments not available for this task or endpoint missing
+            badge.textContent = '—';
+          } else {
+            badge.textContent = '0';
+          }
+        } catch (err) {
+          badge.textContent = '—';
+        }
+      });
+    }
+
     document.addEventListener('click', function (e) {
       const btn = e.target.closest('button.edit-btn');
       if (!btn) return;
@@ -572,6 +684,22 @@
         btn.textContent = 'Edit';
       }, 900);
       console.log('Edit clicked for', id);
+    });
+
+    // Wire filter bar buttons
+    document.getElementById('filter-apply').addEventListener('click', () => {
+      const q = document.getElementById('filter-q').value;
+      const status = document.getElementById('filter-status').value;
+      const priority = document.getElementById('filter-priority').value;
+      const assignee = document.getElementById('filter-assignee').value;
+      fetchTasks({ q, status, priority, assignee });
+    });
+    document.getElementById('filter-clear').addEventListener('click', () => {
+      document.getElementById('filter-q').value = '';
+      document.getElementById('filter-status').value = '';
+      document.getElementById('filter-priority').value = '';
+      document.getElementById('filter-assignee').value = '';
+      fetchTasks();
     });
 
     // Modal handling
@@ -619,6 +747,9 @@
       fieldPriority.value = t.priority ?? 'Medium';
       fieldAssignee.value = t.assignee ?? '';
       fieldTitle.focus();
+
+      // load comments for this task
+      loadComments(taskId);
     }
 
     function closeModal() {
@@ -626,6 +757,9 @@
       modalError.style.display = 'none';
       titleError.style.display = 'none';
       form.reset();
+      // clear comments UI
+      const cl = document.getElementById('comments-list');
+      if (cl) cl.innerHTML = '';
     }
 
     // Open create modal
@@ -727,6 +861,86 @@
       } finally {
         modalSave.disabled = false;
         modalSave.textContent = 'Save';
+      }
+    });
+
+    // Comment helpers
+    async function loadComments(taskId) {
+      const listEl = document.getElementById('comments-list');
+      const countEl = modal.querySelector('#modal-comments > div > div:nth-child(2)');
+      if (!listEl) return;
+      listEl.innerHTML = '<div style="color:var(--muted);">Loading comments…</div>';
+      try {
+        const res = await fetch(`${BASE_URL}/tasks/${taskId}/comments`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            listEl.innerHTML = '<div style="color:var(--muted);">No comment API available</div>';
+            if (countEl) countEl.textContent = '—';
+            return;
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
+        const arr = await res.json();
+        listEl.innerHTML = '';
+        for (const c of arr) {
+          const wrapper = document.createElement('div');
+          wrapper.className = 'comment';
+          const meta = document.createElement('div');
+          meta.className = 'comment-meta';
+          meta.innerHTML = `<strong>${c.author ?? 'anon'}</strong> <span class="muted">• ${new Date(c.created_at).toLocaleDateString()}</span>`;
+          const text = document.createElement('div');
+          text.className = 'comment-text';
+          text.textContent = c.text;
+          const del = document.createElement('button');
+          del.textContent = 'Delete';
+          del.style.marginLeft = '8px';
+          del.addEventListener('click', async () => {
+            try {
+              const dres = await fetch(`${BASE_URL}/tasks/${taskId}/comments/${c.id}`, { method: 'DELETE' });
+              if (dres.status === 204) {
+                wrapper.remove();
+                if (countEl) countEl.textContent = String((parseInt(countEl.textContent) || 1) - 1);
+              } else {
+                alert('Failed to delete comment');
+              }
+            } catch (err) {
+              alert('Network error while deleting comment');
+            }
+          });
+          meta.appendChild(del);
+          wrapper.appendChild(meta);
+          wrapper.appendChild(text);
+          listEl.appendChild(wrapper);
+        }
+        if (countEl) countEl.textContent = String(arr.length);
+      } catch (err) {
+        listEl.innerHTML = `<div style="color:var(--danger);">${err.message}</div>`;
+      }
+    }
+
+    document.getElementById('comment-add').addEventListener('click', async () => {
+      const id = fieldId.value;
+      if (!id) return;
+      const input = document.getElementById('comment-input');
+      const text = input.value.trim();
+      if (!text) { alert('Comment cannot be blank'); return; }
+      try {
+        const res = await fetch(`${BASE_URL}/tasks/${id}/comments`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text })
+        });
+        if (res.status === 201) {
+          input.value = '';
+          await loadComments(id);
+        } else if (res.status === 422) {
+          const b = await res.json();
+          alert(b.detail || 'Validation error');
+        } else if (res.status === 404) {
+          alert('Task not found');
+        } else {
+          alert('Failed to add comment');
+        }
+      } catch (err) {
+        alert('Network error while adding comment');
       }
     });
 
