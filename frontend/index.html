@@ -235,9 +235,9 @@
               <div class="assignee">Unassigned</div>
             </div>
 
-            <div class="card-actions">
-              <button class="edit-btn" data-action="edit" data-id="task-1">Edit</button>
-            </div>
+                  <div class="card-actions">
+                    <button class="edit-btn" data-action="edit" data-id="task-1">Edit</button>
+                  </div>
 
             <div class="data-attrs" aria-hidden="true">
               <code>data-id="task-1"</code>
@@ -358,19 +358,10 @@
       <section id="modal-comments" style="margin-top:12px; border-top:1px solid #eef2ff; padding-top:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
           <h4 style="margin:0; font-size:14px;">Comments</h4>
-          <div style="color:var(--muted); font-size:13px;">3</div>
+          <div id="modal-comments-count" style="color:var(--muted); font-size:13px;"></div>
         </div>
 
-        <div id="comments-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-          <div class="comment">
-            <div class="comment-meta"><strong>alex</strong> <span class="muted">• 2026-07-31</span></div>
-            <div class="comment-text">Initial project skeleton looks good — added basic routes.</div>
-          </div>
-          <div class="comment">
-            <div class="comment-meta"><strong>maya</strong> <span class="muted">• 2026-07-31</span></div>
-            <div class="comment-text">Working on auth integration next.</div>
-          </div>
-        </div>
+        <div id="comments-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
 
         <div style="margin-top:10px; display:flex; gap:8px;">
           <input id="comment-input" placeholder="Add a comment" style="flex:1; padding:8px; border-radius:6px; border:1px solid #e6eefc;" />
@@ -589,8 +580,7 @@
         const countEl = columnCountEl(status);
         if (countEl) countEl.textContent = String(list.length);
       }
-  // refresh comment counts after rendering cards
-  updateCommentCounts();
+  // comments are modal-only; no per-card badge update needed
       // attach drag handlers to columns (cards container's parent .column element)
       document.querySelectorAll('.column').forEach((col) => {
         col.addEventListener('dragover', (e) => {
@@ -649,27 +639,7 @@
     }
 
     // After render, update comment counts for visible cards (fire-and-forget)
-    async function updateCommentCounts() {
-      document.querySelectorAll('.card').forEach(async (card) => {
-        const id = card.dataset.id;
-        const badge = card.querySelector('.card-actions .chip');
-        if (!id || !badge) return;
-        try {
-          const res = await fetch(`${BASE_URL}/tasks/${id}/comments`);
-          if (res.ok) {
-            const arr = await res.json();
-            badge.textContent = String(Array.isArray(arr) ? arr.length : 0);
-          } else if (res.status === 404) {
-            // comments not available for this task or endpoint missing
-            badge.textContent = '—';
-          } else {
-            badge.textContent = '0';
-          }
-        } catch (err) {
-          badge.textContent = '—';
-        }
-      });
-    }
+    // comments are shown only in the modal; per-card badges removed
 
     document.addEventListener('click', function (e) {
       const btn = e.target.closest('button.edit-btn');
