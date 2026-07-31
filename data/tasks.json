@@ -1,0 +1,65 @@
+[
+	{
+		"title": "Design landing page",
+		"description": "Create wireframes and key flows.",
+		"status": "ToDo",
+		"priority": "High",
+		"assignee": "sandra"
+	},
+	{
+		"title": "Set up CI",
+		"description": "Add GitHub Actions for tests and linting.",
+		"status": "ToDo",
+		"priority": "Medium",
+		"assignee": "alex"
+	},
+	{
+		"title": "User settings API",
+		"description": "Implement update settings endpoint.",
+		"status": "InProgress",
+		"priority": "High",
+		"assignee": "maya"
+	},
+	{
+		"title": "Profile picture upload",
+		"description": "Add image upload and storage.",
+		"status": "InProgress",
+		"priority": "Medium",
+		"assignee": null
+	},
+	{
+		"title": "Write unit tests",
+		"description": "Cover storage and business rules.",
+		"status": "ToDo",
+		"priority": "High",
+		"assignee": "dev"
+	},
+	{
+		"title": "Refactor models",
+		"description": "Move shared types and docs.",
+		"status": "Done",
+		"priority": "Low",
+		"assignee": "alex"
+	},
+	{
+		"title": "Accessibility audit",
+		"description": "Run axe and fix critical issues.",
+		"status": "Done",
+		"priority": "Medium",
+		"assignee": "sandra"
+	},
+	{
+		"title": "Performance profiling",
+		"description": "Profile slow endpoints.",
+		"status": "ToDo",
+		"priority": "Low",
+		"assignee": null
+	},
+	{
+		"title": "Polish UI animations",
+		"description": "Smooth transitions for drag-and-drop.",
+		"status": "InProgress",
+		"priority": "Low",
+		"assignee": "ui"
+	}
+]

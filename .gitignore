@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+env/
+venv/
+.env
+.python-version
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+
+# Node
+node_modules/
+
+# Pytest cache
+.pytest_cache/
+
+# data
+data/*.sqlite
