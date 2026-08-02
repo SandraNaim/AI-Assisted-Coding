@@ -6,6 +6,9 @@ What to submit:
 - A public repository URL with the `mid-course-project` branch containing your changes.
 - The `docs/midcourse/` folder containing the required documentation files.
 
+Repository URL (public): https://github.com/SandraNaim/AI-Assisted-Coding
+
+
 How to run the app and tests:
 ```bash
 # start the backend
