@@ -1,43 +1,66 @@
-# Prompt Log — Search/Filters and Modal-only Comments
 
-This log records the meaningful prompts used while implementing the two features. For each prompt, I summarize the AI response and note whether I accepted, edited, or rejected the result.
+# Prompt Log — Search+Filters and Task Comments (strong prompts)
 
-## Feature: Search & Combined Filters
+This log documents the prompts used to implement the two features in this mid-course project: Search & Combined Filters and Task Comments. For each feature I show:
+- a strong prompt template (Context, Task, Constraints) that produced repeatable results,
+- the AI's response summary,
+- what I accepted, edited, or rejected,
+- a weak→strong prompt rewrite example you can reuse.
 
-Prompt 1 (initial, weak):
-"Add a search box to the frontend and make the backend support searching tasks."
-- AI returned: high-level plan suggesting client-side filtering and optional server indexes.
-- Action: Rewrote prompt to require server-side filtering and precise query param names; rejected the client-only approach.
+Design note
+The most reliable prompts contain 1) explicit context (base URL, exact endpoints, allowed enum values), 2) a concise task list, and 3) preservation constraints (what not to change). Asking for a focused diff or a single-file script replacement keeps the assistant's output small and reviewable.
 
-Prompt 2 (stronger):
-"Implement server-side GET /tasks?q= to search title+description and also accept status, priority, assignee as query params. Use simple substring matching for q and enum validation for status/priority. Add tests."
-- AI returned: code patches for `app/features.py`, changes to `GET /tasks` in `app/main.py`, and frontend wiring.
-- Action: Accepted with small edits to validation messages and adapted frontend querystring building.
+---
 
-Prompt 3 (test prompt):
-"Write pytest test cases for GET /tasks filters: q-only, combined filters, invalid enum should return 422."
-- AI returned: pytest files using FastAPI TestClient.
-- Action: Accepted tests; could not run locally here (pytest missing) so marked for local verification.
+## Feature: Search & Combined Filters — strong prompt
 
-## Feature: Modal-only Comments
+Context:
+- Backend base URL: http://localhost:8000
+- Endpoint to load tasks: GET /tasks
+- Status values: ToDo, InProgress, Done
+- Priority sort order inside each column: High, Medium, Low. Tie-breaker: id ascending.
 
-Prompt 1 (initial):
-"Add comments to tasks: list, create, delete. Show comment counts on cards and a comment input on the task modal."
-- AI returned: code to embed comments on cards and show comment inputs on both Create and Edit modals.
-- Action: Rejected parts: I removed per-card counts and kept comments modal-only and edit-only.
+Task:
+- Extend `GET /tasks` to accept optional query params: `q` (text search over title+description), `status`, `priority`, `assignee`.
+- Implement case-insensitive substring matching for `q` on title and description.
+- Keep the API response shape unchanged (array of TaskResponse). Return 200 with [] when no matches.
+- Add pytest tests for `q` search, combined filters, and invalid enum behavior (422).
+- On the frontend, wire the filter/search bar to call `GET /tasks` with matching query params and re-render the board.
 
-Prompt 2 (refined):
-"Make comments a subresource under /tasks/{task_id}/comments with GET, POST, DELETE, and validate non-blank text. In the frontend, only show comments in the Edit modal (hide in New Task modal)."
-- AI returned: `app/comments.py`, endpoints in `app/main.py`, frontend wiring for modal-only comments.
-- Action: Accepted, then tweaked UI to ensure comments section is hidden for New Task and shown for Edit.
+Constraints:
+- Preserve column layout, empty placeholders, and existing class names.
+- Do not add client-side-only filtering; the search must be server-side.
+- Do not change backend request/response shapes beyond adding query params.
+- Return a focused patch for the backend (one module) and a small frontend diff targeting the filter bar wiring.
 
-Prompt 3 (improvement):
-"Fix the frontend so that, on the Create modal, the comments section is not visible; on Edit, show and load comments. Also on modal close the comments list should be cleared."
-- AI returned: JS changes to `openModalCreate`, `openModalEdit`, and `closeModal` to toggle visibility and call `loadComments` appropriately.
-- Action: Accepted and committed.
+What AI returned: Server-side filter code and helper `features.filter_tasks`, `GET /tasks` updated to accept query params, and frontend modifications to build the query string and call `fetchTasks(params)`. Tests scaffolding added.
 
-### Rewritten (improved) prompt example
-Weak prompt: "Add comments to tasks."
-Stronger replacement I used: "Implement a comments subresource mounted at `/tasks/{task_id}/comments` with `GET` (list), `POST` (create, requires non-blank `text`), and `DELETE` (delete by id). Update frontend so comments are only available when editing an existing task: hide comments in New Task modal and show/load comments in Edit modal. Return 201 for create, 204 for delete, 404 for missing task/comment, and 422 for validation errors."
-- AI returned: specific code changes and tests. I accepted the overall approach and edited the UI behavior to remove per-card badges.
+---
+
+## Feature: Task Comments — strong prompt
+
+Context:
+- Backend base URL: http://localhost:8000
+- Comment endpoints should be mounted under: /tasks/{task_id}/comments
+
+Task:
+- Add a `CommentCreate` and `CommentResponse` Pydantic models.
+- Add backend endpoints:
+	- `GET /tasks/{task_id}/comments` — list comments for task (200 + [] when none, 404 if task missing).
+	- `POST /tasks/{task_id}/comments` — create comment, require non-blank `text` (return 201 with created comment), 404 if task missing, 422 for validation.
+	- `DELETE /tasks/{task_id}/comments/{comment_id}` — hard delete (204) or 404 if missing.
+- Keep comments stored in a small in-memory dict (separate from Task storage) with optional JSON seed.
+- Frontend: show comments only in the Edit Task modal (hide on New Task modal). Load comments when opening Edit (GET), allow add (POST) and delete (DELETE), and clear comments on modal close.
+
+Constraints:
+- Do not show per-card comment badges by default (comments are modal-only).
+- Do not change existing task fields or the Task API shape.
+- Return a focused backend module with models + storage helpers and the three endpoints, plus a small frontend modal change to toggle comments visibility and call endpoints.
+
+What AI returned: `app/comments.py` with models and in-memory storage helpers, comments endpoints in `app/main.py`, and frontend wiring for modal-only comments (load, post, delete). Initial AI output included per-card badges and comments in the create modal which I removed.
+
+---
+
+
+
 
