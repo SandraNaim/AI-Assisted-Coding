@@ -1,7 +1,12 @@
 fastapi>=0.95.0
 uvicorn[standard]>=0.22.0
-pydantic>=1.10.0
+# Use Pydantic v2 for models in this project
+pydantic>=2.0.0
 python-dotenv>=1.0.0
 filelock>=3.12.0
+
+# Test deps
+pytest>=7.0.0
+httpx>=0.24.0
 
 # If you pin versions, please verify them after installation with `pip freeze`.
